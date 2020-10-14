@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" type="text/css" id="stylesheet" href="./prism.css" />
+  <script type="text/javascript" src="./prism.js"></script>
+</head>
+<body>
+  <pre class='language-markup'>
+        <code id="code"  contenteditable="true" spellcheck="false"  oninput="highlight(this,event);">    
+        &lt;!DOCTYPE&gt;
+        &lt;html&gt;
+        &lt;head&gt;
+            &lt;title&gt;Highlighter&lt;/title&gt;           
+        &lt;/head&gt;
+        &lt;body&gt;
+        &lt;/body&gt;
+        &lt;/html&gt;
+        </code>
+      </pre>
+  <textarea class='textarea' name='name' id='t'></textarea>
+  <script>
+    Prism.highlightElement(document.getElementById('code'));
+
+    function highlight(e, ev) {
+      var range = window.getSelection().getRangeAt(0);
+      range.setStart(e, 0);
+      var len = range.toString().length;
+      Prism.highlightElement(e);
+      const NODE_TYPE = NodeFilter.SHOW_TEXT;
+      var treeWalker = document.createTreeWalker(e, NODE_TYPE, function next(el) {
+        if (len > el.textContent.length) {
+          len -= el.textContent.length;
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      });
+      var pos = {
+        node: treeWalker.nextNode(),
+        position: len
+      };
+      window.getSelection().removeAllRanges();
+      var range = new Range();
+      range.setStart(pos.node, pos.position);
+      window.getSelection().addRange(range);
+      var copyText = document.getElementById('code').innerText;
+      document.getElementById('t').value = copyText;
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" type="text/css" id="stylesheet" href="atom-one-dark.css" />
+
+  <script type="text/javascript" src="highlight.pack.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+
+<body>
+  <pre><code class="html" contenteditable="true" id="code" oninput="highlightAgain(this);">
+        &lt;!DOCTYPE&gt;
+        &lt;html&gt;
+        &lt;head&gt;
+            &lt;title&gt;Highlighter&lt;/title&gt;
+            &lt;link rel="stylesheet" type="text/css" href="styles/atom-one-dark.css"&gt;
+        &lt;/head&gt;
+        &lt;body&gt;
+        &lt;/body&gt;
+        &lt;/html&gt;
+    </code></pre>
+  <textarea class="textarea" name="name" id="textarea"></textarea>
+  <script>
+    function highlightAgain(el) {
+      let savedSel = rangeSelectionSaveRestore.saveSelection();
+      hljs.initHighlighting.called = false;
+      hljs.initHighlighting();
+      rangeSelectionSaveRestore.restoreSelection(savedSel);
+
+      var copyText = document.getElementsByClassName("html")[0].innerText;
+      document.getElementById("textarea").value = copyText;
+    }
+
+    var rangeSelectionSaveRestore = (function () {
+      var markerTextChar = "\ufeff";
+      var selectionHasExtend =
+        typeof window.getSelection().extend !== "undefined";
+
+      function gEBI(id, doc) {
+        return (doc || document).getElementById(id);
+      }
+
+      function removeNode(node) {
+        node.parentNode.removeChild(node);
+      }
+
+      function isDirectionBackward(dir) {
+        return typeof dir == "string" ? /^backward(?:s)?$/i.test(dir) : !!dir;
+      }
+
+      function isSelectionBackward(sel) {
+        var backward = false;
+        if (!sel.isCollapsed) {
+          var range = document.createRange();
+          range.setStart(sel.anchorNode, sel.anchorOffset);
+          range.setEnd(sel.focusNode, sel.focusOffset);
+          backward = range.collapsed;
+        }
+        return backward;
+      }
+
+      function selectRangeBackwards(sel, range) {
+        if (selectionHasExtend) {
+          var endRange = range.cloneRange();
+          endRange.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(endRange);
+          sel.extend(range.startContainer, range.startOffset);
+          return true;
+        } else {
+          // Just select the range forwards
+          sel.removeAllRanges();
+          sel.addRange(range);
+          return false;
+        }
+      }
+
+      function insertRangeBoundaryMarker(range, atStart) {
+        var markerId =
+          "selectionBoundary_" +
+          +new Date() +
+          "_" +
+          ("" + Math.random()).slice(2);
+        var markerEl;
+        var doc = range.startContainer.ownerDocument;
+        var boundaryRange = range.cloneRange();
+        boundaryRange.collapse(atStart);
+        markerEl = doc.createElement("span");
+        markerEl.id = markerId;
+        markerEl.style.lineHeight = "0";
+        markerEl.style.display = "none";
+        markerEl.textContent = markerTextChar;
+        boundaryRange.insertNode(markerEl);
+        return markerEl;
+      }
+
+      function setRangeBoundary(doc, range, markerId, atStart) {
+        var markerEl = gEBI(markerId, doc);
+        if (markerEl) {
+          range[atStart ? "setStartBefore" : "setEndBefore"](markerEl);
+          removeNode(markerEl);
+        } else {
+          module.warn(
+            "Marker element has been removed. Cannot restore selection."
+          );
+        }
+      }
+
+      function compareRanges(r1, r2) {
+        return r2.compareBoundaryPoints(r1.START_TO_START, r1);
+      }
+
+      function saveRange(range, direction) {
+        var startEl,
+          endEl,
+          doc = range.startContainer.ownerDocument,
+          text = range.toString();
+
+        if (range.collapsed) {
+          endEl = insertRangeBoundaryMarker(range, false);
+          return {
+            document: doc,
+            markerId: endEl.id,
+            collapsed: true,
+          };
+        } else {
+          endEl = insertRangeBoundaryMarker(range, false);
+          startEl = insertRangeBoundaryMarker(range, true);
+
+          return {
+            document: doc,
+            startMarkerId: startEl.id,
+            endMarkerId: endEl.id,
+            collapsed: false,
+            backward: isDirectionBackward(direction),
+            toString: function () {
+              return (
+                "original text: '" +
+                text +
+                "', new text: '" +
+                range.toString() +
+                "'"
+              );
+            },
+          };
+        }
+      }
+
+      function restoreRange(rangeInfo) {
+        var doc = rangeInfo.document;
+        if (typeof normalize == "undefined") {
+          normalize = true;
+        }
+        var range = doc.createRange(doc);
+        if (rangeInfo.collapsed) {
+          var markerEl = gEBI(rangeInfo.markerId, doc);
+          if (markerEl) {
+            markerEl.style.display = "inline";
+            var previousNode = markerEl.previousSibling;
+
+            if (previousNode && previousNode.nodeType == 3) {
+              removeNode(markerEl);
+              range.setStart(previousNode, previousNode.length);
+              range.collapse(true);
+            } else {
+              range.setEndBefore(markerEl);
+              range.collapse(false);
+              removeNode(markerEl);
+            }
+          } else {
+            console.warn(
+              "Marker element has been removed. Cannot restore selection."
+            );
+          }
+        } else {
+          setRangeBoundary(doc, range, rangeInfo.startMarkerId, true);
+          setRangeBoundary(doc, range, rangeInfo.endMarkerId, false);
+        }
+
+        return range;
+      }
+
+      function saveRanges(ranges, direction) {
+        ranges = ranges.slice(0);
+        ranges.sort(compareRanges);
+        var backward = isDirectionBackward(direction);
+
+        var rangeInfos = ranges.map(function (range) {
+          return saveRange(range, backward);
+        });
+
+        for (var i = ranges.length - 1, range, doc; i >= 0; --i) {
+          range = ranges[i];
+          doc = range.startContainer.ownerDocument;
+          if (range.collapsed) {
+            range.setStartAfter(gEBI(rangeInfos[i].markerId, doc));
+            range.collapse(true);
+          } else {
+            range.setEndBefore(gEBI(rangeInfos[i].endMarkerId, doc));
+            range.setStartAfter(gEBI(rangeInfos[i].startMarkerId, doc));
+          }
+        }
+
+        return rangeInfos;
+      }
+
+      function saveSelection(win) {
+        win = win || window;
+        var sel = win.getSelection();
+        var ranges = [];
+        for (var i = 0; i < sel.rangeCount; ++i) {
+          ranges.push(sel.getRangeAt(i));
+        }
+        var backward = ranges.length == 1 && isSelectionBackward(sel);
+        var rangeInfos = saveRanges(ranges, backward);
+
+        sel.removeAllRanges();
+        if (backward) {
+          selectRangeBackwards(sel, ranges[0]);
+        } else {
+          ranges.forEach(function (range) {
+            sel.addRange(range);
+          });
+        }
+
+        return {
+          win: win,
+          rangeInfos: rangeInfos,
+          restored: false,
+        };
+      }
+
+      function restoreRanges(rangeInfos) {
+        var ranges = [];
+
+        var rangeCount = rangeInfos.length;
+
+        for (var i = rangeCount - 1; i >= 0; i--) {
+          ranges[i] = restoreRange(rangeInfos[i], true);
+        }
+
+        return ranges;
+      }
+
+      function restoreSelection(savedSelection, preserveDirection) {
+        if (!savedSelection.restored) {
+          var rangeInfos = savedSelection.rangeInfos;
+          var sel = savedSelection.win.getSelection();
+          var ranges = restoreRanges(rangeInfos);
+          var rangeCount = rangeInfos.length;
+
+          sel.removeAllRanges();
+          if (
+            rangeCount == 1 &&
+            preserveDirection &&
+            selectionHasExtend &&
+            rangeInfos[0].backward
+          ) {
+            selectRangeBackwards(sel, ranges[0]);
+          } else {
+            ranges.forEach(function (range) {
+              sel.addRange(range);
+            });
+          }
+
+          savedSelection.restored = true;
+        }
+      }
+
+      function removeMarkerElement(doc, markerId) {
+        var markerEl = gEBI(markerId, doc);
+        if (markerEl) {
+          removeNode(markerEl);
+        }
+      }
+
+      function removeMarkers(savedSelection) {
+        savedSelection.rangeInfos.forEach(function (rangeInfo) {
+          if (rangeInfo.collapsed) {
+            removeMarkerElement(savedSelection.doc, rangeInfo.markerId);
+          } else {
+            removeMarkerElement(savedSelection.doc, rangeInfo.startMarkerId);
+            removeMarkerElement(savedSelection.doc, rangeInfo.endMarkerId);
+          }
+        });
+      }
+
+      return {
+        saveRange: saveRange,
+        restoreRange: restoreRange,
+        saveRanges: saveRanges,
+        restoreRanges: restoreRanges,
+        saveSelection: saveSelection,
+        restoreSelection: restoreSelection,
+        removeMarkerElement: removeMarkerElement,
+        removeMarkers: removeMarkers,
+      };
+    })();
+  </script>
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+</body>
+
+</html>

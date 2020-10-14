@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" type="text/css" id="stylesheet" href="atom-one-dark.css" />
+  <script type="text/javascript" src="highlight.pack.js"></script>
+  <script>
+    hljs.initHighlightingOnLoad();
+  </script>
+</head>
+<body>
+  <textarea class='textarea' name='name' id='t' oninput="highlightAgain(this,event)" spellcheck="false" onscroll="ms()">
+      &lt;!DOCTYPE&gt;
+      &lt;html&gt;
+      &lt;head&gt;
+          &lt;title&gt;Highlighter&lt;/title&gt;
+          &lt;link rel="stylesheet" type="text/css" href="styles/atom-one-dark.css"&gt;
+      &lt;/head&gt;
+      &lt;body&gt;
+      &lt;/body&gt;
+      &lt;/html&gt;</textarea>
+  <pre><code class='html' id="code" spellcheck="false" contenteditable="true">
+    </code></pre>
+  <script>
+    document.getElementById('code').innerText = document.getElementById('t').value;
+
+    function highlightAgain(element, ev) {
+      document.getElementById('code').innerText = document.getElementById('t').value;
+      document.getElementById("code").scrollLeft = document.getElementById("t").scrollLeft;
+      hljs.initHighlighting.called = false;
+      hljs.initHighlighting();
+      element.style.height = "1px";
+      element.style.height = (25 + element.scrollHeight) + "px";
+      document.getElementById("code").scrollLeft = document.getElementById("t").scrollLeft;
+    }
+
+    function ms() {
+      document.getElementById("code").scrollLeft = document.getElementById("t").scrollLeft;
+    }
+  </script>
+</body>
+</html>

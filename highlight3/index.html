@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" type="text/css" id="stylesheet" href="atom-one-dark.css" />
+  <script type="text/javascript" src="highlight.pack.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+  <pre><code class='html' contenteditable="true" id="code" oninput="highlightAgain(this,event);" >       
+        &lt;!DOCTYPE&gt;
+        &lt;html&gt;
+        &lt;head&gt;
+            &lt;title&gt;Highlighter&lt;/title&gt;
+            &lt;link rel="stylesheet" type="text/css" href="styles/atom-one-dark.css"&gt;
+        &lt;/head&gt;
+        &lt;body&gt;
+        &lt;/body&gt;
+        &lt;/html&gt;
+    </code></pre>
+  <textarea class='textarea' name='name' id='t'></textarea>
+  <script>
+    function highlightAgain(e, ev) {
+      if (ev.inputType == "insertParagraph") return;
+      var range = window.getSelection().getRangeAt(0);
+      range.setStart(e, 0);
+      var len = range.toString().length;
+      hljs.initHighlighting.called = false;
+      hljs.initHighlighting();
+      const NODE_TYPE = NodeFilter.SHOW_TEXT;
+      var treeWalker = document.createTreeWalker(e, NODE_TYPE, function next(el) {
+        if (len > el.textContent.length) {
+          len -= el.textContent.length;
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      });
+      var pos = {
+        node: treeWalker.nextNode(),
+        position: len
+      };
+      window.getSelection().removeAllRanges();
+      var range = new Range();
+      range.setStart(pos.node, pos.position);
+      window.getSelection().addRange(range);
+      var copyText = document.getElementsByClassName('html')[0].innerText;
+      document.getElementById('t').value = copyText;
+    }
+  </script>
+</body>
+</html>
